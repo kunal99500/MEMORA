@@ -381,6 +381,23 @@ class Api {
         headers: _auth));
   }
 
+  static Future<Map<String, dynamic>> aiPrivacyConsent() async =>
+      Map<String, dynamic>.from(_decode(await http.get(
+          _u('/privacy/ai-consent'),
+          headers: _auth)));
+
+  static Future<void> acceptAiPrivacyConsent(String policyVersion) async {
+    _decode(await http.post(
+      _u('/privacy/ai-consent'),
+      headers: _authJson,
+      body: jsonEncode({'policy_version': policyVersion}),
+    ));
+  }
+
+  static Future<void> revokeAiPrivacyConsent() async {
+    _decode(await http.delete(_u('/privacy/ai-consent'), headers: _auth));
+  }
+
   static Future<List> objects(String sid) async {
     final wid = Session.workspaceId;
     final list = _decode(await http.get(
@@ -463,6 +480,49 @@ class Api {
 
   static Future<void> deleteCareItem(String id) async {
     _decode(await http.delete(_u('/care-items/$id'), headers: _auth));
+  }
+
+  // ---------- private workspace documents (local-only Q&A) ----------
+  static Future<List<Map<String, dynamic>>> documents() async {
+    final wid = Session.workspaceId;
+    if (wid == null) throw ApiException(401, 'Sign in to view documents.');
+    final response = Map<String, dynamic>.from(_decode(await http.get(
+        _u('/documents', {'workspace_id': wid}),
+        headers: _auth)));
+    return ((response['documents'] as List?) ?? const [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<void> uploadDocument({
+    required Uint8List bytes,
+    required String filename,
+    required String description,
+  }) async {
+    final wid = Session.workspaceId;
+    if (wid == null) throw ApiException(401, 'Sign in to upload documents.');
+    final request = http.MultipartRequest('POST', _u('/documents'))
+      ..headers.addAll(_auth)
+      ..fields['workspace_id'] = wid
+      ..fields['description'] = description
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+      ));
+    _decode(await http.Response.fromStream(await request.send()));
+  }
+
+  static Future<Map<String, dynamic>> askDocument(
+      String documentId, String question) async =>
+      Map<String, dynamic>.from(_decode(await http.post(
+        _u('/documents/$documentId/ask'),
+        headers: _authJson,
+        body: jsonEncode({'query': question}),
+      )));
+
+  static Future<void> deleteDocument(String documentId) async {
+    _decode(await http.delete(_u('/documents/$documentId'), headers: _auth));
   }
 
   // ---------- connected camera registry ----------

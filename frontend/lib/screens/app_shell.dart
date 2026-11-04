@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../core/app_theme.dart';
 import '../models/memora_models.dart';
 import '../widgets/glass.dart';
+import '../widgets/ai_privacy.dart';
 import '../services/api_service.dart';
 import '../services/session.dart';
 import 'landing_screen.dart';
@@ -47,6 +48,22 @@ class _AppShellState extends State<AppShell> {
     setState(() {
       _pageCache[0] = null;
     });
+  }
+
+  Future<bool> _ensureAiConsent() async {
+    try {
+      final current = await Api.aiPrivacyConsent();
+      if (current['accepted'] == true) return true;
+      if (!mounted) return false;
+      final accepted = await showAiPrivacyConsent(context);
+      if (!accepted || !mounted) return false;
+      await Api.acceptAiPrivacyConsent(
+          (current['policy_version'] ?? aiPrivacyPolicyVersion).toString());
+      return true;
+    } catch (error) {
+      if (mounted) _snack('Could not save AI privacy consent: $error');
+      return false;
+    }
   }
 
   void _navigateTo(int destination) {
@@ -186,12 +203,16 @@ class _AppShellState extends State<AppShell> {
     }
     final pageBuilders = <Widget Function()>[
       () => DashboardScreen(mode: mode!, onNavigate: _navigateTo),
-      () => RoomsScreen(onMediaUploaded: _onMediaUploaded),
-      () => TimelineScreen(onMediaUploaded: _onMediaUploaded),
-      () => const AskMemoraScreen(),
+      () => RoomsScreen(
+          onMediaUploaded: _onMediaUploaded,
+          ensureAiConsent: _ensureAiConsent),
+      () => TimelineScreen(
+          onMediaUploaded: _onMediaUploaded,
+          ensureAiConsent: _ensureAiConsent),
+      () => AskMemoraScreen(ensureAiConsent: _ensureAiConsent),
       () => const MoveMateScreen(),
       () => const UpkeepScreen(),
-      () => const CameraMemoryScreen(),
+      () => CameraMemoryScreen(ensureAiConsent: _ensureAiConsent),
       () => mode == AccountMode.family
           ? const FamilyScreen()
           : mode == AccountMode.business

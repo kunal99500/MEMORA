@@ -12,10 +12,13 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
+import '../widgets/ai_privacy.dart';
 
 class RoomsScreen extends StatefulWidget {
   final Future<void> Function()? onMediaUploaded;
-  const RoomsScreen({super.key, this.onMediaUploaded});
+  final Future<bool> Function()? ensureAiConsent;
+  const RoomsScreen(
+      {super.key, this.onMediaUploaded, this.ensureAiConsent});
   @override
   State<RoomsScreen> createState() => _RoomsScreenState();
 }
@@ -73,7 +76,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
             builder: (_) => _SpaceDetailScreen(
                 spaceId: id,
                 name: name,
-                onMediaUploaded: _refreshAfterUpload)))
+                onMediaUploaded: _refreshAfterUpload,
+                ensureAiConsent: widget.ensureAiConsent)))
         .then((_) => _load());
   }
 
@@ -199,8 +203,12 @@ class _RoomsScreenState extends State<RoomsScreen> {
 class _SpaceDetailScreen extends StatefulWidget {
   final String spaceId, name;
   final Future<void> Function()? onMediaUploaded;
+  final Future<bool> Function()? ensureAiConsent;
   const _SpaceDetailScreen(
-      {required this.spaceId, required this.name, this.onMediaUploaded});
+      {required this.spaceId,
+      required this.name,
+      this.onMediaUploaded,
+      this.ensureAiConsent});
   @override
   State<_SpaceDetailScreen> createState() => _SpaceDetailScreenState();
 }
@@ -258,6 +266,8 @@ class _SpaceDetailScreenState extends State<_SpaceDetailScreen> {
   }
 
   Future<void> _pick(ImageSource src) async {
+    if (widget.ensureAiConsent != null &&
+        !await widget.ensureAiConsent!.call()) return;
     if (src == ImageSource.gallery) {
       try {
         final files = await ImagePicker().pickMultiImage(imageQuality: 100);
@@ -292,6 +302,8 @@ class _SpaceDetailScreenState extends State<_SpaceDetailScreen> {
   }
 
   Future<void> _pickVideo(ImageSource source) async {
+    if (widget.ensureAiConsent != null &&
+        !await widget.ensureAiConsent!.call()) return;
     if (source == ImageSource.gallery) {
       try {
         final result = await FilePicker.platform.pickFiles(
@@ -971,7 +983,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
 }
 
 class AskMemoraScreen extends StatefulWidget {
-  const AskMemoraScreen({super.key});
+  final Future<bool> Function()? ensureAiConsent;
+  const AskMemoraScreen({super.key, this.ensureAiConsent});
   @override
   State<AskMemoraScreen> createState() => _AskMemoraScreenState();
 }
@@ -1198,6 +1211,8 @@ class _AskMemoraScreenState extends State<AskMemoraScreen> {
       _toast(context, 'Scan a space first, then ask about it');
       return;
     }
+    if (widget.ensureAiConsent != null &&
+        !await widget.ensureAiConsent!.call()) return;
     setState(() {
       messages.add(_Msg(user: true, text: q));
       sending = true;
@@ -1650,6 +1665,123 @@ class MoveMateScreen extends StatelessWidget {
       ]));
 }
 
+class _DocumentAskDialog extends StatefulWidget {
+  final Map<String, dynamic> document;
+  const _DocumentAskDialog({required this.document});
+
+  @override
+  State<_DocumentAskDialog> createState() => _DocumentAskDialogState();
+}
+
+class _DocumentAskDialogState extends State<_DocumentAskDialog> {
+  final question = TextEditingController();
+  Map<String, dynamic>? result;
+  String? error;
+  bool busy = false;
+
+  Future<void> _search() async {
+    final query = question.text.trim();
+    if (query.isEmpty || busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      result = await Api.askDocument(widget.document['id'].toString(), query);
+    } catch (exception) {
+      error = 'Could not search this document: $exception';
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    question.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        backgroundColor: MemoraColors.panel,
+        title: Text('Search ${widget.document['name']}'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Private local search: document text is not sent to the AI provider.',
+                  style: TextStyle(
+                      color: MemoraColors.muted, fontSize: 11, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: question,
+                  autofocus: true,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    labelText: 'What do you want to find?',
+                    hintText: 'For example: What is the bill due date?',
+                  ),
+                  onSubmitted: (_) => _search(),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!,
+                      style: const TextStyle(
+                          color: MemoraColors.danger, fontSize: 11)),
+                ],
+                if (result != null) ...[
+                  const Divider(height: 24),
+                  Text(result!['answer'].toString(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  ...(result!['passages'] as List? ?? const []).map((item) {
+                    final passage = Map<String, dynamic>.from(item as Map);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            passage['section'].toString(),
+                            style: const TextStyle(
+                                color: MemoraColors.gold, fontSize: 10),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            passage['text'].toString(),
+                            style: const TextStyle(
+                                color: MemoraColors.muted,
+                                fontSize: 11,
+                                height: 1.4),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: busy ? null : () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: busy ? null : _search,
+            child: Text(busy ? 'Searching…' : 'Search document'),
+          ),
+        ],
+      );
+}
+
 class UpkeepScreen extends StatefulWidget {
   const UpkeepScreen({super.key});
   @override
@@ -1658,7 +1790,9 @@ class UpkeepScreen extends StatefulWidget {
 
 class _UpkeepScreenState extends State<UpkeepScreen> {
   List items = const [];
+  List<Map<String, dynamic>> documents = const [];
   bool loaded = false;
+  bool uploadingDocument = false;
 
   @override
   void initState() {
@@ -1668,14 +1802,18 @@ class _UpkeepScreenState extends State<UpkeepScreen> {
 
   Future<void> _load() async {
     try {
-      final r = await Api.careItems();
+      final results = await Future.wait([Api.careItems(), Api.documents()]);
       if (mounted)
         setState(() {
-          items = r;
+          items = results[0];
+          documents = results[1] as List<Map<String, dynamic>>;
           loaded = true;
         });
-    } catch (_) {
-      if (mounted) setState(() => loaded = true);
+    } catch (error) {
+      if (mounted) {
+        setState(() => loaded = true);
+        _message('Could not load upkeep records: $error');
+      }
     }
   }
 
@@ -1722,6 +1860,164 @@ class _UpkeepScreenState extends State<UpkeepScreen> {
     if (mounted) _load();
   }
 
+  Future<void> _addDocument() async {
+    if (uploadingDocument) return;
+    try {
+      final selection = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'docx'],
+        withData: true,
+      );
+      if (!mounted || selection == null || selection.xFiles.isEmpty) return;
+      final file = selection.xFiles.first;
+      final description = TextEditingController();
+      String? descriptionError;
+      final requiredDescription = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: MemoraColors.panel,
+            title: const Text('Describe this document'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(file.name,
+                    style: const TextStyle(
+                        color: MemoraColors.muted, fontSize: 11)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: description,
+                  autofocus: true,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: InputDecoration(
+                    labelText: 'Description (required)',
+                    hintText: 'What is this document and what should you find?',
+                    errorText: descriptionError,
+                  ),
+                  onChanged: (_) {
+                    if (descriptionError != null) {
+                      setDialogState(() => descriptionError = null);
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (description.text.trim().isEmpty) {
+                    setDialogState(
+                        () => descriptionError = 'A description is required.');
+                    return;
+                  }
+                  Navigator.pop(dialogContext, description.text.trim());
+                },
+                child: const Text('Upload'),
+              ),
+            ],
+          ),
+        ),
+      );
+      description.dispose();
+      if (requiredDescription == null) return;
+
+      setState(() => uploadingDocument = true);
+      await Api.uploadDocument(
+        bytes: await file.readAsBytes(),
+        filename: file.name,
+        description: requiredDescription,
+      );
+      await _load();
+      if (mounted) _message('Document uploaded to this workspace.');
+    } catch (error) {
+      if (mounted) _message('Could not upload document: $error');
+    } finally {
+      if (mounted) setState(() => uploadingDocument = false);
+    }
+  }
+
+  Future<void> _askDocument(Map<String, dynamic> document) =>
+      showDialog<void>(
+        context: context,
+        builder: (_) => _DocumentAskDialog(document: document),
+      );
+
+  Future<void> _deleteDocument(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: MemoraColors.panel,
+        title: const Text('Delete document?'),
+        content: const Text(
+            'This removes the document and its stored file from the workspace.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await Api.deleteDocument(id);
+      await _load();
+    } catch (error) {
+      if (mounted) _message('Could not delete document: $error');
+    }
+  }
+
+  Future<void> _manageAiPrivacy() async {
+    try {
+      final consent = await Api.aiPrivacyConsent();
+      if (!mounted) return;
+      final action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: MemoraColors.panel,
+          title: const Text('AI privacy settings'),
+          content: Text(consent['accepted'] == true
+              ? 'You have accepted the image and AI processing notice. You can review it or withdraw your consent.'
+              : 'You have not accepted the image and AI processing notice. AI image analysis and Ask MEMORA will remain unavailable until you consent.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'close'),
+              child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'policy'),
+              child: const Text('Privacy policy'),
+            ),
+            if (consent['accepted'] == true)
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'revoke'),
+                child: const Text('Withdraw consent'),
+              ),
+          ],
+        ),
+      );
+      if (action == 'policy' && mounted) {
+        await showAiPrivacyPolicy(context);
+      } else if (action == 'revoke') {
+        await Api.revokeAiPrivacyConsent();
+        if (mounted) _message('AI privacy consent withdrawn.');
+      }
+    } catch (error) {
+      if (mounted) _message('Could not load AI privacy settings: $error');
+    }
+  }
+
+  void _message(String value) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+
   Future<void> _delete(String id) async {
     try {
       await Api.deleteCareItem(id);
@@ -1734,29 +2030,65 @@ class _UpkeepScreenState extends State<UpkeepScreen> {
       title: 'Upkeep',
       eyebrow: 'CARE & RECORDS',
       subtitle:
-          'Save the things you want to keep track of \u2014 warranties, serial numbers, service dates \u2014 all in one place.',
+          'Keep household records and private documents in one place.',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Align(
-            alignment: Alignment.centerLeft,
-            child: GlowButton(
-                label: 'Add an item',
-                icon: Icons.add_rounded,
-                onPressed: () {
-                  _add();
-                })),
-        const SizedBox(height: 16),
-        if (!loaded)
-          const Padding(
-              padding: EdgeInsets.only(top: 50),
-              child: Center(
-                  child: CircularProgressIndicator(color: MemoraColors.gold)))
-        else if (items.isEmpty)
-          _empty()
-        else
-          for (final it in items) ...[
-            _tile(it),
-            const SizedBox(height: 9),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _add,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add an item'),
+            ),
+            OutlinedButton.icon(
+              onPressed: uploadingDocument ? null : _addDocument,
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(uploadingDocument ? 'Uploading…' : 'Upload document'),
+            ),
+            TextButton.icon(
+              onPressed: _manageAiPrivacy,
+              icon: const Icon(Icons.privacy_tip_outlined),
+              label: const Text('AI privacy'),
+            ),
           ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'PDF and DOCX only. A description is required. Document text is searched locally and is not sent to the AI provider; convert legacy .doc files to .docx first.',
+          style: TextStyle(color: MemoraColors.muted, fontSize: 10, height: 1.4),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: !loaded
+              ? const Center(
+                  child: CircularProgressIndicator(color: MemoraColors.gold))
+              : ListView(
+                  children: [
+                    if (documents.isNotEmpty) ...[
+                      const Text('Your documents',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      for (final document in documents) ...[
+                        _documentTile(document),
+                        const SizedBox(height: 8),
+                      ],
+                    ],
+                    const Text('Care items',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    if (items.isEmpty)
+                      _empty()
+                    else
+                      for (final item in items) ...[
+                        _tile(item),
+                        const SizedBox(height: 9),
+                      ],
+                  ],
+                ),
+        ),
       ]));
 
   Widget _empty() => Center(
@@ -1812,6 +2144,50 @@ class _UpkeepScreenState extends State<UpkeepScreen> {
           }),
     ]));
   }
+
+  Widget _documentTile(Map<String, dynamic> document) => GlassPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.description_outlined,
+                    color: MemoraColors.cyan, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(document['name'].toString(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 13)),
+                ),
+                Text(document['file_type'].toString().toUpperCase(),
+                    style: const TextStyle(
+                        color: MemoraColors.gold, fontSize: 9)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(document['description'].toString(),
+                style: const TextStyle(
+                    color: MemoraColors.muted, fontSize: 11, height: 1.4)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => _askDocument(document),
+                  icon: const Icon(Icons.search_rounded, size: 16),
+                  label: const Text('Ask this document'),
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Delete document',
+                  onPressed: () => _deleteDocument(document['id'].toString()),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: MemoraColors.muted, size: 19),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 }
 
 class FamilyScreen extends StatelessWidget {

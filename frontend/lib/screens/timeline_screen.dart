@@ -10,7 +10,9 @@ import '../services/session.dart';
 
 class TimelineScreen extends StatefulWidget {
   final Future<void> Function()? onMediaUploaded;
-  const TimelineScreen({super.key, this.onMediaUploaded});
+  final Future<bool> Function()? ensureAiConsent;
+  const TimelineScreen(
+      {super.key, this.onMediaUploaded, this.ensureAiConsent});
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -139,6 +141,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
         .where((item) => item['id'].toString() == timelineId)
         .firstOrNull;
     if (timeline == null || uploading) return;
+    if (widget.ensureAiConsent != null &&
+        !await widget.ensureAiConsent!.call()) return;
     try {
       final picker = ImagePicker();
       final file = video

@@ -25,12 +25,27 @@ The project has two parts:
   and their locations.
 - Use Ask MEMORA with typed questions or supported speech input and spoken
   replies.
+- Store upkeep records and private PDF/DOCX documents with a required
+  description, then search document text locally for matching passages.
 - Create separate space timelines and add or remove timeline media there.
 - Register and manage camera metadata.
 
 Answers are grounded in the workspace information MEMORA has saved. They
 cannot reliably describe a space or item that has not been captured and
 processed.
+
+### Upkeep documents and AI privacy
+
+Upkeep accepts PDF and DOCX files; each upload requires a description.
+Document questions search extracted text locally and return matching passages
+without sending document text to the AI provider. Scanned/image-only PDFs may
+not be searchable; convert legacy `.doc` files to `.docx`.
+
+Image analysis and Ask MEMORA require acceptance of the in-app AI privacy
+notice. Relevant images or saved visual-memory context may be sent to the
+configured third-party AI provider. The provider controls its own data
+handling, so MEMORA cannot guarantee its retention or training practices.
+Users can withdraw consent in Upkeep's AI privacy settings.
 
 ## How a space scan works
 
@@ -244,6 +259,9 @@ configuration.
 - Use HTTPS for deployed services.
 - For production, use PostgreSQL, durable object storage, backups, and managed
   secrets.
+- Mount persistent storage at `MEDIA_ROOT` when using a host with an
+  ephemeral filesystem, or uploaded documents and other media may be lost on
+  restart or redeploy.
 - Local media processing uses FastAPI background tasks and local storage; it
   is a development foundation, not a distributed processing queue.
 - Camera registration is metadata management, not proof of an active camera

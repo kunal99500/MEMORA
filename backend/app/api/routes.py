@@ -1,22 +1,54 @@
-import hashlib,logging,secrets,uuid
+import hashlib,logging,secrets,uuid,zipfile
 from datetime import datetime,timedelta,timezone
 from pathlib import Path
-from fastapi import APIRouter,Depends,HTTPException,UploadFile,File,BackgroundTasks
+from fastapi import APIRouter,Depends,HTTPException,UploadFile,File,BackgroundTasks,Form
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from fastapi.responses import Response
+from fastapi.responses import Response,FileResponse
 from app.db.session import get_db,SessionLocal
 from app.core.config import get_settings
+from app.core.privacy import AI_PRIVACY_POLICY_VERSION
 from app.core.security import hash_password,verify_password,create_token
-from app.models.entities import User,PasswordReset,Workspace,Membership,Location,Timeline,Capture,MediaAsset,ObjectIdentity,Observation,Event,Relationship,InspectionTask,InventoryRecord,Evidence,Frame,SceneNote,CareItem,ChatMessage
-from app.schemas.api import Register,Login,PasswordResetRequest,PasswordResetConfirm,WorkspaceCreate,LocationCreate,CaptureCreate,TimelineCreate,SearchRequest,AskRequest,InventoryCreate,CareItemCreate
+from app.models.entities import User,PasswordReset,Workspace,Membership,Location,Timeline,Capture,MediaAsset,ObjectIdentity,Observation,Event,Relationship,InspectionTask,InventoryRecord,Evidence,Frame,SceneNote,CareItem,ChatMessage,WorkspaceDocument,AiPrivacyConsent
+from app.schemas.api import Register,Login,PasswordResetRequest,PasswordResetConfirm,WorkspaceCreate,LocationCreate,CaptureCreate,TimelineCreate,SearchRequest,AskRequest,InventoryCreate,CareItemCreate,DocumentAsk,AiPrivacyConsentCreate
 from app.services.access import current_user,require_membership
+from app.services.documents import DocumentReadError,extract_document_sections,find_document_passages
 from app.services.evidence import crop_bounds,expand_crop_bounds
 from app.services.processing import process_capture
 from app.services.qa import answer_question
 from app.services.password_reset import send_password_reset_email
 router=APIRouter()
 logger=logging.getLogger(__name__)
+
+def _has_ai_privacy_consent(db:Session,user_id:str)->bool:
+    consent=db.get(AiPrivacyConsent,user_id)
+    return bool(consent and consent.policy_version==AI_PRIVACY_POLICY_VERSION)
+
+@router.get('/privacy/ai-consent')
+def get_ai_privacy_consent(u:User=Depends(current_user),db:Session=Depends(get_db)):
+    return {'accepted':_has_ai_privacy_consent(db,u.id),
+            'policy_version':AI_PRIVACY_POLICY_VERSION}
+
+@router.post('/privacy/ai-consent')
+def accept_ai_privacy_consent(p:AiPrivacyConsentCreate,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    if p.policy_version!=AI_PRIVACY_POLICY_VERSION:
+        raise HTTPException(409,'The AI privacy notice has changed. Review the current notice and try again.')
+    consent=db.get(AiPrivacyConsent,u.id)
+    if consent:
+        consent.policy_version=p.policy_version
+        consent.accepted_at=datetime.now(timezone.utc)
+    else:
+        db.add(AiPrivacyConsent(user_id=u.id,policy_version=p.policy_version))
+    db.commit()
+    return {'accepted':True,'policy_version':AI_PRIVACY_POLICY_VERSION}
+
+@router.delete('/privacy/ai-consent')
+def revoke_ai_privacy_consent(u:User=Depends(current_user),db:Session=Depends(get_db)):
+    consent=db.get(AiPrivacyConsent,u.id)
+    if consent:
+        db.delete(consent)
+        db.commit()
+    return {'accepted':False}
 
 def _matches_media_signature(prefix: bytes, extension: str) -> bool:
     if extension in ('.jpg', '.jpeg'):
@@ -197,6 +229,8 @@ async def upload(cid:str,file:UploadFile=File(...),u:User=Depends(current_user),
     cap=db.get(Capture,cid)
     if not cap:raise HTTPException(404,'Capture not found')
     require_membership(cap.workspace_id,u,db)
+    if not _has_ai_privacy_consent(db,u.id):
+        raise HTTPException(428,'Review and accept the AI privacy notice before processing images with AI.')
     ext=Path(file.filename or '').suffix.lower();kinds={'.jpg':'photo','.jpeg':'photo','.png':'photo','.webp':'photo','.mp4':'video','.mov':'video','.avi':'video','.mkv':'video','.webm':'video'}
     if ext not in kinds:raise HTTPException(415,'Unsupported file type')
     if cap.media_type not in ('mixed',kinds[ext]):raise HTTPException(400,'Media type does not match capture')
@@ -262,6 +296,8 @@ def history(oid:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
 @router.post('/ask')
 def ask(p:AskRequest,u:User=Depends(current_user),db:Session=Depends(get_db)):
     require_membership(p.workspace_id,u,db)
+    if not _has_ai_privacy_consent(db,u.id):
+        raise HTTPException(428,'Review and accept the AI privacy notice before using Ask MEMORA.')
     question=ChatMessage(
         workspace_id=p.workspace_id,
         user_id=u.id,
@@ -494,6 +530,153 @@ def delete_capture(cid:str,u:User=Depends(current_user),db:Session=Depends(get_d
         except OSError:
             logger.exception('Could not remove deleted capture file %s',path)
     return {'deleted':cid}
+@router.get('/documents')
+def list_documents(workspace_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    require_membership(workspace_id,u,db)
+    rows=(db.query(WorkspaceDocument).filter_by(workspace_id=workspace_id)
+          .order_by(WorkspaceDocument.created_at.desc()).all())
+    return {'documents':[{
+        'id':document.id,
+        'name':document.name,
+        'description':document.description,
+        'file_type':document.file_type,
+        'size_bytes':document.size_bytes,
+        'created_at':document.created_at.isoformat() if document.created_at else None,
+    } for document in rows]}
+
+@router.post('/documents',status_code=201)
+async def upload_document(
+    workspace_id:str=Form(...),
+    description:str=Form(...),
+    file:UploadFile=File(...),
+    u:User=Depends(current_user),
+    db:Session=Depends(get_db),
+):
+    require_membership(workspace_id,u,db)
+    description=description.strip()
+    if not description:
+        raise HTTPException(422,'A document description is required.')
+    file_type=Path(file.filename or '').suffix.lower()
+    if file_type=='.doc':
+        raise HTTPException(415,'Convert legacy .doc files to .docx before uploading.')
+    if file_type not in ('.pdf','.docx'):
+        raise HTTPException(415,'Only PDF and DOCX documents are supported.')
+
+    settings=get_settings()
+    limit=settings.max_upload_mb*1024*1024
+    document_id='doc_'+uuid.uuid4().hex
+    folder=settings.media_path/workspace_id/'documents'
+    folder.mkdir(parents=True,exist_ok=True)
+    temporary=folder/(document_id+file_type+'.tmp')
+    destination=folder/(document_id+file_type)
+    size=0
+    prefix=bytearray()
+    try:
+        with temporary.open('wb') as output:
+            while chunk:=await file.read(1024*1024):
+                size+=len(chunk)
+                if size>limit:
+                    raise HTTPException(413,'Document exceeds the configured upload limit.')
+                if len(prefix)<8:
+                    prefix.extend(chunk[:8-len(prefix)])
+                output.write(chunk)
+        if size==0:
+            raise HTTPException(400,'The selected document is empty.')
+        if file_type=='.pdf' and not bytes(prefix).startswith(b'%PDF-'):
+            raise HTTPException(415,'The file contents do not match a PDF document.')
+        if file_type=='.docx':
+            try:
+                with zipfile.ZipFile(temporary) as archive:
+                    names=set(archive.namelist())
+                    if '[Content_Types].xml' not in names or 'word/document.xml' not in names:
+                        raise HTTPException(415,'The file contents do not match a DOCX document.')
+            except zipfile.BadZipFile as exc:
+                raise HTTPException(415,'The file contents do not match a DOCX document.') from exc
+        try:
+            extracted=extract_document_sections(temporary,file_type)
+        except DocumentReadError as exc:
+            raise HTTPException(415,str(exc)) from exc
+        if sum(len(text) for _,text in extracted)>1_000_000:
+            raise HTTPException(413,'Extracted document text exceeds the supported limit.')
+
+        original_name=(file.filename or 'document'+file_type).replace('\\','/').split('/')[-1]
+        temporary.replace(destination)
+        document=WorkspaceDocument(
+            id=document_id,
+            workspace_id=workspace_id,
+            uploaded_by=u.id,
+            name=original_name[:255],
+            description=description[:4000],
+            stored_path=str(destination),
+            file_type=file_type,
+            size_bytes=size,
+        )
+        db.add(document)
+        db.commit()
+        return {'id':document.id,'name':document.name,'file_type':document.file_type}
+    except Exception:
+        if temporary.exists():
+            temporary.unlink()
+        if destination.exists() and not db.query(WorkspaceDocument).filter_by(id=document_id).first():
+            destination.unlink()
+        raise
+
+@router.get('/documents/{document_id}/file')
+def download_document(document_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    document=db.get(WorkspaceDocument,document_id)
+    if not document:
+        raise HTTPException(404,'Document not found.')
+    require_membership(document.workspace_id,u,db)
+    path=Path(document.stored_path)
+    if not path.is_file():
+        raise HTTPException(404,'The stored document file is unavailable.')
+    return FileResponse(path,filename=document.name,media_type='application/octet-stream')
+
+@router.post('/documents/{document_id}/ask')
+def ask_document(
+    document_id:str,
+    p:DocumentAsk,
+    u:User=Depends(current_user),
+    db:Session=Depends(get_db),
+):
+    document=db.get(WorkspaceDocument,document_id)
+    if not document:
+        raise HTTPException(404,'Document not found.')
+    require_membership(document.workspace_id,u,db)
+    path=Path(document.stored_path)
+    if not path.is_file():
+        raise HTTPException(404,'The stored document file is unavailable.')
+    try:
+        sections=extract_document_sections(path,document.file_type)
+    except DocumentReadError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    passages=find_document_passages(sections,p.query)
+    if not passages:
+        return {
+            'answer':'I could not find matching text. Try terms that appear in the document. Scanned or image-only documents are not text-searchable.',
+            'passages':[],
+        }
+    return {
+        'answer':f"Relevant passages from {document.name}:",
+        'passages':[{'section':section,'text':text} for section,text in passages],
+    }
+
+@router.delete('/documents/{document_id}')
+def delete_document(document_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    document=db.get(WorkspaceDocument,document_id)
+    if not document:
+        raise HTTPException(404,'Document not found.')
+    require_membership(document.workspace_id,u,db)
+    path=Path(document.stored_path)
+    db.delete(document)
+    db.commit()
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        logger.exception('Could not remove deleted document file %s',path)
+        raise HTTPException(500,'Document record was deleted but its file could not be removed.') from exc
+    return {'deleted':document_id}
+
 @router.get('/care-items')
 def list_care_items(workspace_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     require_membership(workspace_id,u,db)

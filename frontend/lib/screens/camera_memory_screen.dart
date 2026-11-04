@@ -4,7 +4,8 @@ import '../widgets/glass.dart';
 import '../services/api_service.dart';
 
 class CameraMemoryScreen extends StatefulWidget {
-  const CameraMemoryScreen({super.key});
+  final Future<bool> Function()? ensureAiConsent;
+  const CameraMemoryScreen({super.key, this.ensureAiConsent});
   @override
   State<CameraMemoryScreen> createState() => _CameraMemoryScreenState();
 }
@@ -130,6 +131,8 @@ class _CameraMemoryScreenState extends State<CameraMemoryScreen> {
               ])),
               IconButton(tooltip: 'Start stream ingestion',
                 onPressed: enabled ? () async {
+                  if (widget.ensureAiConsent != null &&
+                      !await widget.ensureAiConsent!.call()) return;
                   try { await Api.startCamera('${c['id']}'); _message('Camera worker starting'); await _load(); }
                   catch (e) { _message(e.toString()); }
                 } : null,

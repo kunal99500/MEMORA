@@ -89,6 +89,18 @@ For SQLite, the backend enables WAL mode and a busy timeout to better handle
 concurrent local requests. For deployed systems, configure a production
 database such as PostgreSQL.
 
+### Upkeep documents
+
+Upkeep accepts PDF and DOCX documents with a required description. The backend
+stores the original file under `MEDIA_ROOT/<workspace-id>/documents`; questions
+extract text locally and return matching passages without calling the AI
+provider. Scanned/image-only PDFs may not be searchable, and legacy DOC files
+must be converted to DOCX.
+
+On Render or another ephemeral-filesystem host, configure a persistent disk
+mounted at the path used by `MEDIA_ROOT`; otherwise uploaded documents and
+other local media can be lost when the service restarts or redeploys.
+
 ### Capture lifecycle
 
 1. Create a capture and associate it with a workspace and optionally a space
@@ -124,6 +136,8 @@ schemas and response details.
 | Saved scans | `GET /workspaces/{id}/scan-images`, `DELETE /captures/{id}` |
 | Evidence | `GET /evidence/{id}`, `GET /evidence/{id}/file`, `GET /evidence/{id}/preview` |
 | Questions | `POST /ask` |
+| Upkeep documents | `GET /documents`, `POST /documents`, `POST /documents/{id}/ask`, `GET /documents/{id}/file`, `DELETE /documents/{id}` |
+| AI privacy consent | `GET /privacy/ai-consent`, `POST /privacy/ai-consent`, `DELETE /privacy/ai-consent` |
 | Chat history | `GET /workspaces/{id}/chat-history`, `GET /workspaces/{id}/chat-conversations`, `DELETE /workspaces/{id}/chat-history` |
 | Timelines | `POST /workspaces/{id}/timelines`, `GET /workspaces/{id}/timelines`, `GET /workspaces/{id}/timeline` |
 | Camera registry | `/cameras` routes for authenticated camera metadata and controls |

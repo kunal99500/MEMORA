@@ -26,6 +26,10 @@ class AskRequest(BaseModel):
     query: str
     location_id: str|None=None
     conversation_id: str|None=Field(default=None, max_length=64)
+class DocumentAsk(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
+class AiPrivacyConsentCreate(BaseModel):
+    policy_version: str = Field(min_length=1, max_length=40)
 class InventoryCreate(BaseModel): workspace_id: str; product_name: str; sku: str|None=None; barcode: str|None=None; rfid: str|None=None; system_quantity: int|None=Field(default=None,ge=0); location_id: str|None=None
 class CareItemCreate(BaseModel): workspace_id: str; name: str; note: str=''; location: str=''
 

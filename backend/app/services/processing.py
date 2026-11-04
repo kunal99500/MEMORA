@@ -4,6 +4,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.models.entities import (
+    AiPrivacyConsent,
     Capture,
     Evidence,
     Frame,
@@ -12,6 +13,7 @@ from app.models.entities import (
     Observation,
     SceneNote,
 )
+from app.core.privacy import AI_PRIVACY_POLICY_VERSION
 from app.vision.muse import analyze_image
 from app.vision.providers import barcode_read, ocr_read
 from app.vision.quality import assess_image
@@ -24,6 +26,7 @@ def process_capture(db: Session, capture_id: str, media_root: Path) -> dict:
         raise ValueError('Capture not found')
     capture_context = {
         'id': cap.id,
+        'created_by': cap.created_by,
         'workspace_id': cap.workspace_id,
         'location_id': cap.location_id,
         'domain': cap.domain,
@@ -40,6 +43,14 @@ def process_capture(db: Session, capture_id: str, media_root: Path) -> dict:
         'ocr': [],
         'barcodes': [],
     }
+    consent = db.get(AiPrivacyConsent, capture_context['created_by'])
+    ai_image_analysis_allowed = bool(
+        consent and consent.policy_version == AI_PRIVACY_POLICY_VERSION
+    )
+    if not ai_image_analysis_allowed:
+        report['warnings'].append(
+            'AI image analysis was skipped because AI privacy consent is not active.'
+        )
     try:
         media_rows = db.query(MediaAsset).filter_by(capture_id=capture_id).all()
         media_data = [
@@ -66,19 +77,20 @@ def process_capture(db: Session, capture_id: str, media_root: Path) -> dict:
                 )
 
                 vision_result = None
-                try:
-                    vision_result = analyze_image(
-                        fr['path'],
-                        {
-                            'domain': capture_context['domain'],
-                            'label': capture_context['label'],
-                        },
-                    )
-                except Exception as exc:
-                    report['warnings'].append(
-                        f'Vision unavailable/failed for frame '
-                        f'{fr["index"]}: {type(exc).__name__}: {exc}'
-                    )
+                if ai_image_analysis_allowed:
+                    try:
+                        vision_result = analyze_image(
+                            fr['path'],
+                            {
+                                'domain': capture_context['domain'],
+                                'label': capture_context['label'],
+                            },
+                        )
+                    except Exception as exc:
+                        report['warnings'].append(
+                            f'Vision unavailable/failed for frame '
+                            f'{fr["index"]}: {type(exc).__name__}: {exc}'
+                        )
 
                 try:
                     report['ocr'].extend(ocr_read(fr['path']))

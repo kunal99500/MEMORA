@@ -3,6 +3,7 @@ import '../core/app_theme.dart';
 import '../models/memora_models.dart';
 import '../widgets/glass.dart';
 import '../widgets/illustrations.dart';
+import '../widgets/ai_privacy.dart';
 
 TextStyle _disp(double size,
         {FontWeight weight = FontWeight.w600,
@@ -486,13 +487,18 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _footer() => Padding(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-        child: Row(children: const [
-          BrandMark(size: 24),
-          SizedBox(width: 9),
-          Text('MEMORA',
-              style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1)),
-          Spacer(),
-          Text('© 2026 · Visual memory',
+        child: Row(children: [
+          const BrandMark(size: 24),
+          const SizedBox(width: 9),
+          const Text('MEMORA',
+              style:
+                  TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1)),
+          const Spacer(),
+          TextButton(
+            onPressed: () => showAiPrivacyPolicy(context),
+            child: const Text('Privacy policy'),
+          ),
+          const Text('© 2026 · Visual memory',
               style: TextStyle(color: MemoraColors.muted, fontSize: 10)),
         ]),
       );

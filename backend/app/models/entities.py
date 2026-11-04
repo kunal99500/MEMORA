@@ -173,6 +173,24 @@ class CareItem(Base):
     location: Mapped[str]=mapped_column(String(200),default='')
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True),default=now)
 
+class WorkspaceDocument(Base):
+    __tablename__='workspace_documents'
+    id: Mapped[str]=mapped_column(String(64),primary_key=True,default=lambda:uid('doc'))
+    workspace_id: Mapped[str]=mapped_column(ForeignKey('workspaces.id'),index=True)
+    uploaded_by: Mapped[str]=mapped_column(ForeignKey('users.id'))
+    name: Mapped[str]=mapped_column(String(255))
+    description: Mapped[str]=mapped_column(Text)
+    stored_path: Mapped[str]=mapped_column(Text)
+    file_type: Mapped[str]=mapped_column(String(10))
+    size_bytes: Mapped[int]=mapped_column(Integer)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True),default=now)
+
+class AiPrivacyConsent(Base):
+    __tablename__='ai_privacy_consents'
+    user_id: Mapped[str]=mapped_column(ForeignKey('users.id'),primary_key=True)
+    policy_version: Mapped[str]=mapped_column(String(40))
+    accepted_at: Mapped[datetime]=mapped_column(DateTime(timezone=True),default=now)
+
 
 class Camera(Base):
     """Registered camera metadata. Credentials/stream URLs are deliberately not stored here."""
