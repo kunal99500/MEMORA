@@ -49,6 +49,7 @@ class Api {
     Session.token = d['access_token'];
     Session.userName = name;
     Session.rememberMe = true;
+    Session.rememberedEmail = email.trim();
     await Session.save();
     return {'token': d['access_token'], 'user_id': d['user_id']};
   }
@@ -64,6 +65,7 @@ class Api {
         })));
     Session.token = d['access_token'];
     Session.rememberMe = rememberMe;
+    Session.rememberedEmail = rememberMe ? email.trim() : null;
     await Session.save();
     return {'token': d['access_token'], 'user_id': d['user_id']};
   }

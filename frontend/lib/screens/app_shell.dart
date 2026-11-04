@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/app_theme.dart';
 import '../models/memora_models.dart';
 import '../widgets/glass.dart';
@@ -147,6 +148,7 @@ class _AppShellState extends State<AppShell> {
     try {
       await Api.login(creds.email, creds.password,
           rememberMe: creds.rememberMe);
+      TextInput.finishAutofillContext(shouldSave: true);
       await Api.me();
       final wss = await Api.workspaces();
       if (wss.isEmpty) {
@@ -172,6 +174,7 @@ class _AppShellState extends State<AppShell> {
         _pageCache = List<Widget?>.filled(8, null);
       });
     } catch (e) {
+      TextInput.finishAutofillContext(shouldSave: false);
       _snack(e.toString());
     }
   }
@@ -469,9 +472,9 @@ class _SignInDialog extends StatefulWidget {
 }
 
 class _SignInDialogState extends State<_SignInDialog> {
-  final email = TextEditingController();
+  late final email = TextEditingController(text: Session.rememberedEmail ?? '');
   final password = TextEditingController();
-  bool rememberMe = true;
+  bool rememberMe = Session.rememberMe;
   @override
   void dispose() {
     email.dispose();
@@ -483,90 +486,105 @@ class _SignInDialogState extends State<_SignInDialog> {
   Widget build(BuildContext context) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: SingleChildScrollView(
-            child: GlassPanel(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: const [
-                    BrandMark(size: 34),
-                    SizedBox(width: 11),
-                    Text('MEMORA',
+        child: AutofillGroup(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              child: GlassPanel(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: const [
+                      BrandMark(size: 34),
+                      SizedBox(width: 11),
+                      Text('MEMORA',
+                          style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2)),
+                    ]),
+                    const SizedBox(height: 22),
+                    const Text('Welcome back',
                         style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2)),
-                  ]),
-                  const SizedBox(height: 22),
-                  const Text('Welcome back',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  const Text('Sign in to your visual memory.',
-                      style:
-                          TextStyle(color: MemoraColors.muted, fontSize: 12)),
-                  const SizedBox(height: 22),
-                  TextField(
-                      controller: email,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                          labelText: 'Email address',
-                          prefixIcon: Icon(Icons.mail_outline))),
-                  const SizedBox(height: 13),
-                  TextField(
-                      controller: password,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: Icon(Icons.lock_outline))),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: rememberMe,
-                    onChanged: (value) =>
-                        setState(() => rememberMe = value ?? false),
-                    title: const Text('Remember me',
-                        style: TextStyle(fontSize: 13)),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    dense: true,
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(
-                          context, _SignInResult.recovery(email.text.trim())),
-                      child: const Text('Forgot password?'),
+                            fontSize: 24, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    const Text('Sign in to your visual memory.',
+                        style:
+                            TextStyle(color: MemoraColors.muted, fontSize: 12)),
+                    const SizedBox(height: 22),
+                    TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [
+                          AutofillHints.username,
+                          AutofillHints.email,
+                        ],
+                        decoration: const InputDecoration(
+                            labelText: 'Email address',
+                            prefixIcon: Icon(Icons.mail_outline))),
+                    const SizedBox(height: 13),
+                    TextField(
+                        controller: password,
+                        obscureText: true,
+                        autofillHints: const [AutofillHints.password],
+                        decoration: const InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: Icon(Icons.lock_outline))),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: rememberMe,
+                      onChanged: (value) =>
+                          setState(() => rememberMe = value ?? false),
+                      title: const Text('Remember me',
+                          style: TextStyle(fontSize: 13)),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
                     ),
-                  ),
-                  const SizedBox(height: 22),
-                  Row(children: [
-                    Expanded(
-                        child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side:
-                                    const BorderSide(color: MemoraColors.line),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 15)),
-                            child: const Text('Cancel'))),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: GlowButton(
-                            label: 'Sign in',
-                            icon: Icons.login_rounded,
-                            onPressed: () => Navigator.pop(
-                                context,
-                                _SignInResult(
-                                  email: email.text.trim(),
-                                  password: password.text,
-                                  rememberMe: rememberMe,
-                                )))),
-                  ]),
-                ],
+                    const Padding(
+                      padding: EdgeInsets.only(left: 36),
+                      child: Text(
+                        'Keep me signed in and remember my email on this device.',
+                        style:
+                            TextStyle(color: MemoraColors.muted, fontSize: 10),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(
+                            context, _SignInResult.recovery(email.text.trim())),
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Row(children: [
+                      Expanded(
+                          child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(
+                                      color: MemoraColors.line),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 15)),
+                              child: const Text('Cancel'))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: GlowButton(
+                              label: 'Sign in',
+                              icon: Icons.login_rounded,
+                              onPressed: () => Navigator.pop(
+                                  context,
+                                  _SignInResult(
+                                    email: email.text.trim(),
+                                    password: password.text,
+                                    rememberMe: rememberMe,
+                                  )))),
+                    ]),
+                  ],
+                ),
               ),
             ),
           ),
