@@ -9,7 +9,8 @@ import '../services/api_service.dart';
 import '../services/session.dart';
 
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key});
+  final Future<void> Function()? onMediaUploaded;
+  const TimelineScreen({super.key, this.onMediaUploaded});
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -181,6 +182,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
           ? 'Added to ${timeline['name']} timeline.'
           : 'Added to ${timeline['name']} timeline; gallery save failed.');
       await _load(preferTimelineId: timelineId);
+      await widget.onMediaUploaded?.call();
     } catch (exception) {
       if (mounted) _showMessage('Could not upload media: $exception');
     } finally {

@@ -11,7 +11,9 @@ class DashboardScreen extends StatefulWidget {
   final AccountMode mode;
   final ValueChanged<int> onNavigate;
   const DashboardScreen(
-      {super.key, required this.mode, required this.onNavigate});
+      {super.key,
+      required this.mode,
+      required this.onNavigate});
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -106,7 +108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Wrap(spacing: 12, runSpacing: 12, children: [
                     _stat(c.maxWidth, 'Spaces', _n('rooms'),
                         Icons.home_work_outlined, MemoraColors.cyan),
-                    _stat(c.maxWidth, 'Photos', _n('scans'),
+                    _stat(c.maxWidth, 'Photos', _n('photos'),
                         Icons.photo_library_outlined, MemoraColors.gold),
                     if (mode != AccountMode.personal)
                       _stat(c.maxWidth, fourthLabel, _n(fourthKey),
@@ -277,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? 'Loading…'
         : (_i('rooms') == 0
             ? 'No photos yet'
-            : '${_i('rooms')} spaces · ${_i('scans')} photos');
+            : '${_i('rooms')} spaces · ${_i('photos')} photos');
     return GlassPanel(
         tint: MemoraColors.blue,
         padding: const EdgeInsets.all(17),

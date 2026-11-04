@@ -41,6 +41,13 @@ class _AppShellState extends State<AppShell> {
   void _snack(String s) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
 
+  Future<void> _onMediaUploaded() async {
+    if (!mounted) return;
+    setState(() {
+      _pageCache[0] = null;
+    });
+  }
+
   void _showProfile() {
     showModalBottomSheet(
       context: context,
@@ -170,8 +177,8 @@ class _AppShellState extends State<AppShell> {
       () => DashboardScreen(
           mode: mode!,
           onNavigate: (i) => setState(() => index = i.clamp(0, 7).toInt())),
-      () => const RoomsScreen(),
-      () => const TimelineScreen(),
+      () => RoomsScreen(onMediaUploaded: _onMediaUploaded),
+      () => TimelineScreen(onMediaUploaded: _onMediaUploaded),
       () => const AskMemoraScreen(),
       () => const MoveMateScreen(),
       () => const UpkeepScreen(),

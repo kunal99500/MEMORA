@@ -356,14 +356,17 @@ def overview(wid:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     evs=db.query(Event).filter_by(workspace_id=wid).count()
     mems=db.query(Membership).filter_by(workspace_id=wid).count()
     caps=db.query(Capture).filter_by(workspace_id=wid).count()
-    return {'objects':objs,'rooms':locs,'spaces':locs,'changes':evs,'members':mems,'activities':caps,'scans':caps}
+    photos=(db.query(MediaAsset).join(Capture,MediaAsset.capture_id==Capture.id)
+            .filter(Capture.workspace_id==wid,MediaAsset.media_kind=='photo').count())
+    return {'objects':objs,'rooms':locs,'spaces':locs,'changes':evs,'members':mems,'activities':caps,'scans':caps,'photos':photos}
 @router.get('/workspaces/{wid}/rooms-summary')
 def rooms_summary(wid:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     require_membership(wid,u,db)
     out=[]
     for loc in db.query(Location).filter_by(workspace_id=wid).all():
-        cap_ids=[c.id for c in db.query(Capture).filter_by(workspace_id=wid,location_id=loc.id).all()]
-        img=db.query(Evidence).filter(Evidence.capture_id.in_(cap_ids),Evidence.source_type=='original_frame').count() if cap_ids else 0
+        img=(db.query(MediaAsset).join(Capture,MediaAsset.capture_id==Capture.id)
+             .filter(Capture.workspace_id==wid,Capture.location_id==loc.id,
+                     MediaAsset.media_kind=='photo').count())
         out.append({'space_id':loc.id,'location_id':loc.id,'name':loc.name,'image_count':img,'location_type':loc.location_type})
     return {'rooms':out}
 @router.get('/workspaces/{wid}/timeline')

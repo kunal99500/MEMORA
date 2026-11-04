@@ -14,7 +14,8 @@ import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 
 class RoomsScreen extends StatefulWidget {
-  const RoomsScreen({super.key});
+  final Future<void> Function()? onMediaUploaded;
+  const RoomsScreen({super.key, this.onMediaUploaded});
   @override
   State<RoomsScreen> createState() => _RoomsScreenState();
 }
@@ -61,10 +62,18 @@ class _RoomsScreenState extends State<RoomsScreen> {
     }
   }
 
+  Future<void> _refreshAfterUpload() async {
+    await _load();
+    await widget.onMediaUploaded?.call();
+  }
+
   void _open(String id, String name) {
     Navigator.of(context)
         .push(MaterialPageRoute(
-            builder: (_) => _SpaceDetailScreen(spaceId: id, name: name)))
+            builder: (_) => _SpaceDetailScreen(
+                spaceId: id,
+                name: name,
+                onMediaUploaded: _refreshAfterUpload)))
         .then((_) => _load());
   }
 
@@ -189,7 +198,9 @@ class _RoomsScreenState extends State<RoomsScreen> {
 
 class _SpaceDetailScreen extends StatefulWidget {
   final String spaceId, name;
-  const _SpaceDetailScreen({required this.spaceId, required this.name});
+  final Future<void> Function()? onMediaUploaded;
+  const _SpaceDetailScreen(
+      {required this.spaceId, required this.name, this.onMediaUploaded});
   @override
   State<_SpaceDetailScreen> createState() => _SpaceDetailScreenState();
 }
@@ -228,6 +239,7 @@ class _SpaceDetailScreenState extends State<_SpaceDetailScreen> {
       final res = await Api.scan(widget.spaceId, filename, bytes, filename);
       final n = (res['objects'] as List?)?.length ?? 0;
       await _load();
+      await widget.onMediaUploaded?.call();
       if (mounted) {
         final result = n > 0
             ? 'Remembered $n objects in this room'
@@ -336,6 +348,7 @@ class _SpaceDetailScreenState extends State<_SpaceDetailScreen> {
             : 'Video added to ${widget.name}; gallery save failed.',
       );
       await _load();
+      await widget.onMediaUploaded?.call();
     } catch (exception) {
       if (mounted) _toast(context, 'Could not add video: $exception');
     } finally {
@@ -372,6 +385,7 @@ class _SpaceDetailScreenState extends State<_SpaceDetailScreen> {
         }
       }
       await _load();
+      if (uploaded > 0) await widget.onMediaUploaded?.call();
       if (!mounted) return;
       final mediaName = video ? 'video' : 'image';
       final successMessage = uploaded == 0
