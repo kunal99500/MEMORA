@@ -99,9 +99,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(width: 10),
           const Text('MEMORA',
               style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
-                  fontSize: 18)),
+                  fontWeight: FontWeight.w800, letterSpacing: 2, fontSize: 18)),
           const Spacer(),
           if (wide) ...[
             _navLink('Features', () => _to(_featuresKey)),
@@ -204,8 +202,7 @@ class _LandingScreenState extends State<LandingScreen> {
               Expanded(flex: 10, child: text),
               const SizedBox(width: 20),
               const Expanded(
-                  flex: 11,
-                  child: FloatingHomeIllustration(height: 440)),
+                  flex: 11, child: FloatingHomeIllustration(height: 440)),
             ])
           : Column(children: [
               text,
@@ -293,9 +290,21 @@ class _LandingScreenState extends State<LandingScreen> {
   // ---------------- how it works ----------------
   Widget _how(BuildContext context) {
     const steps = [
-      ['01', 'Scan a space', 'Take a short walkthrough video. MEMORA sees every object and where it sits.'],
-      ['02', 'It remembers', 'Each object, its condition and its place are stored as a private, timestamped memory.'],
-      ['03', 'Ask anything', 'Get an answer grounded in the exact frame the object was last seen in.'],
+      [
+        '01',
+        'Scan a space',
+        'Take a short walkthrough video. MEMORA sees every object and where it sits.'
+      ],
+      [
+        '02',
+        'It remembers',
+        'Each object, its condition and its place are stored as a private, timestamped memory.'
+      ],
+      [
+        '03',
+        'Ask anything',
+        'Get an answer grounded in the exact frame the object was last seen in.'
+      ],
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 46),
@@ -321,20 +330,68 @@ class _LandingScreenState extends State<LandingScreen> {
   // ---------------- features ----------------
   Widget _features(BuildContext context) {
     final feats = <List<dynamic>>[
-      [Icons.search_rounded, 'Visual search', 'Ask for any object and jump to where it was last seen.', MemoraColors.gold],
-      [Icons.history_rounded, 'Time travel', 'Scroll back to see how a room looked last week or last year.', MemoraColors.gold],
-      [Icons.compare_arrows_rounded, 'Change tracking', 'See what moved, appeared, or went missing between scans.', MemoraColors.cyan],
-      [Icons.auto_awesome, 'Ask MEMORA', 'A grounded assistant that answers using real visual evidence.', MemoraColors.gold],
-      [Icons.all_inbox_rounded, 'MoveMate', 'Pack by camera. MEMORA labels every box for you.', MemoraColors.cyan],
-      [Icons.home_repair_service_outlined, 'Home Guardian', 'Warranties and service dates tracked, with reminders.', MemoraColors.violet],
-      [Icons.center_focus_strong_outlined, 'Live Search', 'Point your camera and MEMORA guides you to an object.', MemoraColors.cyan],
-      [Icons.grid_view_rounded, 'Floor plan', 'A clean, auto-generated map of your home.', MemoraColors.violet],
-      [Icons.people_alt_outlined, 'Shared access', 'Family or team share one memory, with who-did-what history.', MemoraColors.gold],
+      [
+        Icons.search_rounded,
+        'Visual search',
+        'Ask for any object and jump to where it was last seen.',
+        MemoraColors.gold
+      ],
+      [
+        Icons.history_rounded,
+        'Time travel',
+        'Scroll back to see how a room looked last week or last year.',
+        MemoraColors.gold
+      ],
+      [
+        Icons.compare_arrows_rounded,
+        'Change tracking',
+        'See what moved, appeared, or went missing between scans.',
+        MemoraColors.cyan
+      ],
+      [
+        Icons.auto_awesome,
+        'Ask MEMORA',
+        'A grounded assistant that answers using real visual evidence.',
+        MemoraColors.gold
+      ],
+      [
+        Icons.all_inbox_rounded,
+        'MoveMate',
+        'Pack by camera. MEMORA labels every box for you.',
+        MemoraColors.cyan
+      ],
+      [
+        Icons.home_repair_service_outlined,
+        'Home Guardian',
+        'Warranties and service dates tracked, with reminders.',
+        MemoraColors.violet
+      ],
+      [
+        Icons.center_focus_strong_outlined,
+        'Live Search',
+        'Point your camera and MEMORA guides you to an object.',
+        MemoraColors.cyan
+      ],
+      [
+        Icons.grid_view_rounded,
+        'Floor plan',
+        'A clean, auto-generated map of your home.',
+        MemoraColors.violet
+      ],
+      [
+        Icons.people_alt_outlined,
+        'Shared access',
+        'Family or team share one memory, with who-did-what history.',
+        MemoraColors.gold
+      ],
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 46),
       child: Column(children: [
-        _head(context, 'EVERYTHING MEMORA DOES', 'One memory, built around your world.',
+        _head(
+            context,
+            'EVERYTHING MEMORA DOES',
+            'One memory, built around your world.',
             'From finding a single object to running a whole warehouse — every capability, in one calm app.',
             key: _featuresKey),
         const SizedBox(height: 28),
@@ -361,77 +418,43 @@ class _LandingScreenState extends State<LandingScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 46),
       child: Column(children: [
-        _head(context, 'PLANS & PRICING', 'Choose your MEMORA.',
-            'One intelligent memory, shaped around your world — for a home, a family, or a business.',
+        _head(context, 'PRICING COMING SOON', 'Plans are on the way.',
+            'We’re finalizing MEMORA plans for homes, families, and businesses.',
             key: _pricingKey),
-        const SizedBox(height: 30),
+        const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: LayoutBuilder(builder: (c, cx) {
-            final cols = cx.maxWidth > 860 ? 3 : 1;
-            final cw = _colW(cx.maxWidth, cols);
-            return Wrap(spacing: 16, runSpacing: 16, children: [
-              SizedBox(
-                  width: cw,
-                  child: _Plan(
-                      dot: MemoraColors.cyan,
-                      name: 'PERSONAL',
-                      forLine: 'For one home',
-                      price: 'Free',
-                      priceSub: ' forever',
-                      featured: false,
-                      cta: 'Get started',
-                      onTap: () => widget.onStart(AccountMode.personal),
-                      bullets: const [
-                        '1 personal workspace',
-                        'Up to 3 rooms',
-                        'Visual search & Ask MEMORA',
-                        'Time travel & change tracking',
-                      ])),
-              SizedBox(
-                  width: cw,
-                  child: _Plan(
-                      dot: const Color(0xFFE58A83),
-                      name: 'FAMILY',
-                      forLine: 'One account, shared',
-                      price: '\$8',
-                      priceSub: ' / month',
-                      featured: true,
-                      cta: 'Start free trial',
-                      onTap: () => widget.onStart(AccountMode.family),
-                      bullets: const [
-                        'Everything in Personal',
-                        'Up to 6 members, one memory',
-                        'Unlimited rooms + MoveMate',
-                        'Home Guardian reminders',
-                        'Who-changed-what history',
-                      ])),
-              SizedBox(
-                  width: cw,
-                  child: _Plan(
-                      dot: MemoraColors.gold,
-                      name: 'BUSINESS',
-                      forLine: 'Teams & locations',
-                      price: '\$29',
-                      priceSub: ' / month',
-                      featured: false,
-                      cta: 'Get started',
-                      onTap: () => widget.onStart(AccountMode.business),
-                      bullets: const [
-                        'Everything in Family',
-                        'Multiple locations & zones',
-                        'Asset inventory & roles',
-                        'Live Search & floor plans',
-                        'Priority processing & support',
-                      ])),
-            ]);
-          }),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: GlassPanel(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: Column(
+                children: [
+                  const Icon(Icons.hourglass_top_rounded,
+                      color: MemoraColors.gold, size: 34),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'MEMORA pricing will be announced soon.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Create an account to start using MEMORA while we prepare the plans.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: MemoraColors.muted, fontSize: 12, height: 1.5),
+                  ),
+                  const SizedBox(height: 20),
+                  GlowButton(
+                    label: 'Get started',
+                    onPressed: () => widget.onStart(AccountMode.personal),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        const SizedBox(height: 18),
-        const Text(
-            'Example launch pricing · cancel anytime · your scans stay private.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: MemoraColors.muted, fontSize: 11)),
       ]),
     );
   }
@@ -446,8 +469,8 @@ class _LandingScreenState extends State<LandingScreen> {
             const SizedBox(height: 12),
             Text('Stop searching. Start remembering.',
                 textAlign: TextAlign.center,
-                style: _disp(
-                    MediaQuery.of(context).size.width > 700 ? 42 : 30)),
+                style:
+                    _disp(MediaQuery.of(context).size.width > 700 ? 42 : 30)),
             const SizedBox(height: 10),
             const Text(
                 'Scan your first room in two minutes and ask MEMORA where anything is.',
@@ -482,7 +505,8 @@ class _Trust extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.check_circle_outline, size: 14, color: MemoraColors.gold),
+        const Icon(Icons.check_circle_outline,
+            size: 14, color: MemoraColors.gold),
         const SizedBox(width: 6),
         Text(text,
             style: const TextStyle(color: MemoraColors.muted, fontSize: 12)),
@@ -554,117 +578,4 @@ class _Feat extends StatelessWidget {
             style: const TextStyle(
                 color: MemoraColors.muted, fontSize: 13, height: 1.5)),
       ]));
-}
-
-class _Plan extends StatelessWidget {
-  final Color dot;
-  final String name, forLine, price, priceSub, cta;
-  final bool featured;
-  final List<String> bullets;
-  final VoidCallback onTap;
-  const _Plan(
-      {required this.dot,
-      required this.name,
-      required this.forLine,
-      required this.price,
-      required this.priceSub,
-      required this.featured,
-      required this.cta,
-      required this.bullets,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    final card = Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-            color: featured
-                ? MemoraColors.gold.withOpacity(.5)
-                : MemoraColors.line),
-        gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(.05),
-              Colors.white.withOpacity(.015)
-            ]),
-        boxShadow: featured
-            ? [
-                BoxShadow(
-                    color: MemoraColors.goldDeep.withOpacity(.16),
-                    blurRadius: 40,
-                    offset: const Offset(0, 16))
-              ]
-            : [],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-              width: 11,
-              height: 11,
-              decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    letterSpacing: 1)),
-            Text(forLine,
-                style:
-                    const TextStyle(color: MemoraColors.muted, fontSize: 11)),
-          ]),
-        ]),
-        const SizedBox(height: 16),
-        Text.rich(TextSpan(children: [
-          TextSpan(text: price, style: _disp(50, spacing: 0)),
-          TextSpan(
-              text: priceSub,
-              style: const TextStyle(
-                  color: MemoraColors.muted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500)),
-        ])),
-        const SizedBox(height: 16),
-        GlowButton(label: cta, primary: featured, onPressed: onTap),
-        const SizedBox(height: 18),
-        ...bullets.map((b) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.check_rounded,
-                    size: 16, color: MemoraColors.success),
-                const SizedBox(width: 9),
-                Expanded(
-                    child: Text(b,
-                        style: const TextStyle(fontSize: 13, height: 1.4))),
-              ]),
-            )),
-      ]),
-    );
-    if (!featured) return card;
-    return Stack(clipBehavior: Clip.none, children: [
-      card,
-      Positioned(
-        top: -11,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
-            decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [MemoraColors.gold, MemoraColors.goldDeep]),
-                borderRadius: BorderRadius.circular(30)),
-            child: const Text('MOST POPULAR',
-                style: TextStyle(
-                    color: Color(0xFF1C1403),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1)),
-          ),
-        ),
-      ),
-    ]);
-  }
 }
