@@ -182,6 +182,103 @@ remember and search. MEMORA: Capture. Remember. Find.”
   optional OCR and barcode features unless they are enabled and visible in the
   build being demonstrated.
 
+## Connect an RTSP camera
+
+MEMORA has a development RTSP sampler. This can connect an Android phone
+running an IP-camera app or another RTSP/RTSPS camera to a workspace. The
+backend must be able to reach the camera over the network.
+
+### 1. Start the camera stream
+
+For an Android phone, install an IP-camera app such as IP Webcam, connect the
+phone and backend computer to the same Wi-Fi network, grant camera permission,
+and start its server. Note the phone's Wi-Fi IP address, port, and RTSP path.
+For a dedicated camera, find its RTSP/RTSPS stream URL in the camera's
+authorized configuration.
+
+An example URL might look like this:
+
+```text
+rtsp://192.168.1.105:8080/h264_pcm.sdp
+```
+
+Use the actual URL and path shown for your device; this example is not
+universal. Use the camera device's LAN IP, not `localhost` or `127.0.0.1`.
+Before configuring MEMORA, verify the URL from the backend computer with VLC
+or another RTSP player. If that player cannot open the stream, MEMORA will not
+be able to read it either.
+
+### 2. Configure the backend
+
+In `backend/.env`, map a short reference name to the stream URL:
+
+```dotenv
+CAMERA_SAMPLE_INTERVAL_SECONDS=30
+MEMORA_CAMERA_STREAMS_JSON={"phonecam":"rtsp://192.168.1.105:8080/h264_pcm.sdp"}
+```
+
+Replace the sample URL with the stream URL you verified. Keep stream URLs and
+credentials private; do not commit `.env` or enter raw passwords in the app.
+The app's **Secret reference** field must contain the mapping key (`phonecam`
+in this example), not the RTSP URL.
+
+If OpenCV/FFmpeg has trouble opening the RTSP stream, set this environment
+variable in the same PowerShell window before starting FastAPI:
+
+```powershell
+$env:OPENCV_FFMPEG_CAPTURE_OPTIONS = "rtsp_transport;tcp"
+```
+
+Restart the backend after changing `.env`:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+$env:OPENCV_FFMPEG_CAPTURE_OPTIONS = "rtsp_transport;tcp"
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Use `--host 0.0.0.0` only when another device, such as a physical phone
+running the MEMORA app, needs to connect to the backend computer. Allow Python
+through Windows Firewall on a trusted Private network if prompted. Avoid
+exposing the development server to the public internet.
+
+### 3. Register and start it in MEMORA
+
+1. Sign in and select the workspace that should own the camera captures.
+2. Open **Cameras** and choose **Add camera**.
+3. Give it a name, select **RTSP**, and enter the matching reference name
+   (for example, `phonecam`) as the secret reference.
+4. Save the camera and choose **Start stream ingestion**.
+5. Check the camera status. A connected worker reports `worker_state: online`
+   and updates `last_frame_at`.
+
+The worker saves sampled still frames as ordinary photo captures and sends
+them through the existing processing pipeline. The configured interval has a
+15-second minimum. Stop the worker from the camera card or call
+`POST /api/v1/cameras/{camera_id}/stop`; stop the phone's camera server when
+finished.
+
+### Troubleshooting and limitations
+
+- **No stream configured:** ensure the app's secret reference exactly matches
+  the key in `MEMORA_CAMERA_STREAMS_JSON`, then restart FastAPI.
+- **Cannot open the stream:** verify it in VLC, check the device IP and RTSP
+  path, and confirm both devices can communicate on the network.
+- **VLC works but MEMORA does not:** try the FFmpeg TCP setting above and
+  confirm the OpenCV build has FFmpeg support.
+- **No objects appear:** a saved frame does not guarantee vision analysis.
+  Configure `META_API_KEY` and check capture status and backend logs.
+- **Phone stream stops:** keep the phone powered, check the camera app's
+  background/battery settings, and prevent it from being stopped by the OS.
+
+This is a development worker that runs inside the FastAPI process. It keeps
+worker state in memory, stops when the backend stops, and is not coordinated
+across multiple server workers. It samples still frames; it does not save
+continuous video or provide real-time tracking. For production, use a
+supervised worker service and a secrets manager. See the
+[backend camera integration guide](./backend/app/cameras/README.md).
+
 ## Important configuration
 
 The backend reads settings from `backend/.env`. Important settings include:
