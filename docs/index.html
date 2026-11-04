@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MEMORA — Demo</title>
+<style>
+  :root{--bg:#15151A;--panel:#1F1F26;--gold:#FFD487;--muted:#A8A49C;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:#fff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:18px}
+  .brand{display:flex;align-items:center;gap:10px;letter-spacing:3px;font-weight:800;font-size:20px}
+  .dot{width:22px;height:22px;border-radius:50%;
+       background:conic-gradient(#7FC7D4,#B7A6D4,#FFD487,#7FC7D4);
+       -webkit-mask:radial-gradient(circle 4px at center, transparent 98%, #000 100%);}
+  video{width:100%;max-width:960px;border-radius:14px;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  p{color:var(--muted);font-size:13px}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+  <div class="brand"><span class="dot"></span>MEMORA</div>
+  <video controls autoplay playsinline preload="auto">
+    <source src="https://raw.githack.com/kunal99500/MEMORA/main/demo/MEMORA_3min_demo.mp4" type="video/mp4"/>
+    <source src="https://raw.githubusercontent.com/kunal99500/MEMORA/main/demo/MEMORA_3min_demo.mp4" type="video/mp4"/>
+    Your browser can’t play this video.
+    <a href="https://raw.githubusercontent.com/kunal99500/MEMORA/main/demo/MEMORA_3min_demo.mp4">Download it here</a>.
+  </video>
+  <p>3-minute demo · intro → MEMORA in action → tech stack</p>
+</body>
+</html>
