@@ -395,8 +395,11 @@ def timeline(
     for cap in captures:
         ev=db.query(Evidence).filter_by(capture_id=cap.id,source_type='original_frame').first()
         media=db.query(MediaAsset).filter_by(capture_id=cap.id).first()
+        image=(f'/api/v1/evidence/{ev.id}/file' if ev else
+               f'/api/v1/captures/{cap.id}/media/{media.id}/file'
+               if media and media.media_kind=='photo' else None)
         out.append({'capture_id':cap.id,'space':locs.get(cap.location_id,''),'label':cap.label,
-            'image':f'/api/v1/evidence/{ev.id}/file' if ev else None,
+            'image':image,
             'media_type':media.media_kind if media else cap.media_type,
             'created_at':cap.created_at.isoformat() if cap.created_at else None,
             'status':cap.status})
