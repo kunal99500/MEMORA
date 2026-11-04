@@ -6,6 +6,9 @@ MEMORA is a visual-memory app for real-world spaces. Add a photo or video to a
 room, garden, garage, or another space, then ask questions about what was
 recorded and where it was seen.
 
+🌐 **Live Demo:** https://memora-2399d.web.app  
+💻 **Backend API:** https://memora-5byo.onrender.com
+
 The project has two parts:
 
 | Folder | Responsibility |
