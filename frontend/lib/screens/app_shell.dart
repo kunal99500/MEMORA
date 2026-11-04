@@ -48,6 +48,14 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _navigateTo(int destination) {
+    final nextIndex = destination.clamp(0, 7).toInt();
+    setState(() {
+      if (nextIndex == 0) _pageCache[0] = null;
+      index = nextIndex;
+    });
+  }
+
   void _showProfile() {
     showModalBottomSheet(
       context: context,
@@ -174,9 +182,7 @@ class _AppShellState extends State<AppShell> {
       return LandingScreen(onStart: start, onSignIn: _signIn);
     }
     final pageBuilders = <Widget Function()>[
-      () => DashboardScreen(
-          mode: mode!,
-          onNavigate: (i) => setState(() => index = i.clamp(0, 7).toInt())),
+      () => DashboardScreen(mode: mode!, onNavigate: _navigateTo),
       () => RoomsScreen(onMediaUploaded: _onMediaUploaded),
       () => TimelineScreen(onMediaUploaded: _onMediaUploaded),
       () => const AskMemoraScreen(),
@@ -277,7 +283,7 @@ class _AppShellState extends State<AppShell> {
   Widget _navItem(String label, IconData icon, int i) => Padding(
         padding: const EdgeInsets.only(bottom: 5),
         child: InkWell(
-            onTap: () => setState(() => index = i),
+            onTap: () => _navigateTo(i),
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -345,8 +351,8 @@ class _AppShellState extends State<AppShell> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           for (final i in destinations)
-            _mobileNavItem(labels[i], icons[i], index == i,
-                () => setState(() => index = i)),
+            _mobileNavItem(
+                labels[i], icons[i], index == i, () => _navigateTo(i)),
           _mobileNavItem(
               'More', Icons.grid_view_rounded, moreSelected, _showMore),
         ],
@@ -423,7 +429,7 @@ class _AppShellState extends State<AppShell> {
                 title: Text(labels[i]),
                 onTap: () {
                   Navigator.pop(context);
-                  setState(() => index = pageIndexes[i]);
+                  _navigateTo(pageIndexes[i]);
                 },
               ),
             const SizedBox(height: 8),

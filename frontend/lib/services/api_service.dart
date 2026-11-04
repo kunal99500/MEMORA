@@ -147,11 +147,17 @@ class Api {
   }
 
   static Future<Map<String, dynamic>> stats(String wid) async =>
-      Map<String, dynamic>.from(_decode(
-          await http.get(_u('/workspaces/$wid/overview'), headers: _auth)));
+      Map<String, dynamic>.from(_decode(await http.get(
+          _u('/workspaces/$wid/overview', {
+            '_refresh': DateTime.now().microsecondsSinceEpoch.toString(),
+          }),
+          headers: _auth)));
 
   static Future<List> roomsSummary(String wid) async =>
-      _decode(await http.get(_u('/workspaces/$wid/rooms-summary'),
+      _decode(await http.get(
+          _u('/workspaces/$wid/rooms-summary', {
+            '_refresh': DateTime.now().microsecondsSinceEpoch.toString(),
+          }),
           headers: _auth))['rooms'] as List;
 
   static Future<List<Map<String, dynamic>>> timelines(String wid) async {
