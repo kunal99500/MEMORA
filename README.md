@@ -120,68 +120,6 @@ Use the matching backend address for the runtime:
 For web, add the app's origin to `ALLOWED_ORIGINS` in `backend/.env`. Use an
 HTTPS backend for release deployments.
 
-## Three-minute demo
-
-### 0:00–0:25 — Introduction
-
-“Hi, I’m Kunal Malik. I’m interested in building practical applications with
-AI. MEMORA grew from a familiar problem: sometimes we forget where we put
-everyday things. I wanted to explore how AI could make the spaces around us
-easier to search.”
-
-Adjust the description of how the idea began to match your own experience.
-
-### 0:25–0:50 — Introduce MEMORA
-
-“MEMORA turns captured spaces into visual memories. I can upload a photo or
-take one with the in-app camera, then ask questions about information that
-MEMORA has actually saved.”
-
-### 0:50–1:20 — Capture a space
-
-Open **Scan a space**, choose a space, and show **Upload image** and
-**Capture image**. Select or take a clear photo, then submit it. Explain that
-uploads are stored first and processed asynchronously.
-
-### 1:20–1:55 — Explain processing
-
-“The app is built with Flutter. Its Python and FastAPI backend stores captures
-and their evidence. When the model provider is configured, Muse Spark 1.3
-analyzes the image and supplies scene and object information. That information
-becomes part of the space's saved memory.”
-
-“SAM 3.1 segmentation is not active in this version, so I won't claim that the
-app generates or displays segmentation masks.”
-
-### 1:55–2:35 — Ask a grounded question
-
-After processing finishes, ask something clearly supported by the captured
-image, such as “Where are the glass jars?” or “What items are visible on the
-kitchen counter?” Show the answer and any evidence image.
-
-“MEMORA uses the saved visual information as context. The answer depends on
-what has been captured and processed.”
-
-### 2:35–3:00 — Stack and close
-
-“MEMORA uses Flutter, Python, FastAPI, SQLAlchemy, and SQLite for local
-development. Muse Spark 1.3 provides optional visual understanding when its
-provider is configured. The goal is to make everyday spaces easier to
-remember and search. MEMORA: Capture. Remember. Find.”
-
-## Demo checklist
-
-- Confirm the backend is running and the app points to the correct backend URL.
-- Use a device/browser where camera permission is available; verify a captured
-  image reaches the backend.
-- Wait for the selected scan to finish processing before asking about its
-  contents.
-- Ask a question whose answer is clearly visible in the selected image.
-- Do not present an inferred or unsupported location as a confirmed fact.
-- Do not claim SAM masks, production-grade always-on camera ingestion, or
-  optional OCR and barcode features unless they are enabled and visible in the
-  build being demonstrated.
-
 ## Connect an RTSP camera
 
 MEMORA has a development RTSP sampler. This can connect an Android phone
